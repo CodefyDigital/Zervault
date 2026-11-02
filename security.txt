@@ -1,0 +1,4 @@
+Contact: mailto:codefydigital@protonmail.com
+Expires: 2027-11-30T00:00:00.000Z
+Preferred-Languages: tr, en
+Policy: https://codefydigital.github.io/Zervault/security.html

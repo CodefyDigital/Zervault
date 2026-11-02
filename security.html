@@ -1,0 +1,98 @@
+<!doctype html>
+<html lang="tr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>ZERVAULT — Güvenlik Tasarımı / Security Design</title>
+  <style>
+    :root { --bg:#f5f8fc; --card:#ffffff; --ink:#0d1b2d; --muted:#4d6580; --line:#dbe5f0; --accent:#1e7bff; }
+    @media (prefers-color-scheme: dark) { :root { --bg:#050b14; --card:#0d1b2d; --ink:#f4f8ff; --muted:#8fa9c4; --line:#1d3a57; --accent:#3db8ff; } }
+    * { box-sizing:border-box; }
+    body { margin:0; background:var(--bg); color:var(--ink); font:16px/1.6 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif; }
+    main { max-width:760px; margin:0 auto; padding:32px 16px 64px; }
+    header { margin-bottom:24px; }
+    h1 { font-size:28px; margin:0 0 4px; }
+    .muted { color:var(--muted); font-size:14px; }
+    nav a { color:var(--accent); text-decoration:none; margin-right:16px; font-weight:600; }
+    article { background:var(--card); border:1px solid var(--line); border-radius:16px; padding:8px 24px 16px; margin:20px 0; }
+    h2 { font-size:18px; margin:20px 0 4px; }
+    p { margin:0 0 8px; color:var(--ink); }
+    article > h1 { font-size:22px; margin:16px 0 0; }
+    ul { margin:0 0 8px; padding-left:20px; } li { margin:2px 0; }
+    code { font-size:14px; }
+  </style>
+</head>
+<body>
+  <main>
+    <header>
+      <h1>ZERVAULT</h1>
+      <div class="muted">Güvenlik Tasarımı · Security Design</div>
+      <nav style="margin-top:12px"><a href="#tr">Türkçe</a><a href="#en">English</a><a href="privacy-policy.html">Gizlilik / Privacy</a></nav>
+    </header>
+    <article id="tr" lang="tr">
+      <h1>Güvenlik Tasarımı</h1>
+      <div class="muted">Sürüm 3.0.7 · Son güncelleme: Kasım 2026</div>
+      <section><h2>Temel ilke</h2><p>ZERVAULT'ta sunucu, hesap ya da bulut yoktur. Kasa verisi yalnızca telefonunuzda, şifreli olarak durur ve hiçbir yere gönderilmez. Bu sayfa, verilerinizin nasıl korunduğunu açıkça anlatır; güvenlik "bize güvenin" değil, doğrulanabilir bir tasarım olmalı.</p></section>
+      <section><h2>Anahtar yapısı</h2><ul>
+        <li>Tüm kasa verisi, kurulumda rastgele üretilen 256 bitlik bir <b>veri anahtarıyla (DEK)</b> AES-256-GCM ile şifrelenir.</li>
+        <li>DEK diskte iki kat sarılı durur: önce PIN'inizden ya da kasa parolanızdan PBKDF2-HMAC-SHA256 ile türetilen anahtarla, sonra cihazdan dışarı çıkarılamayan bir <b>Android Keystore</b> anahtarıyla.</li>
+        <li>Bu yüzden uygulama dosyaları başka bir cihaza kopyalansa bile açılamaz. Android yedeklemesi ve cihazdan cihaza aktarım uygulama verisi için kapalıdır.</li>
+        <li>Açık DEK yalnızca bellekte tutulur; uygulama bir süre kullanılmazsa silinir.</li>
+      </ul></section>
+      <section><h2>Bütünlük</h2><ul>
+        <li>Her şifrelemede yeni, rastgele bir IV kullanılır. GCM etiketi sayesinde değiştirilmiş veri çözülmez.</li>
+        <li>Her bölüm (hesaplar, kartlar, notlar…) biçim sürümü, kasaya özel kimlik ve bölüm türüyle <b>ek doğrulanan veri (AAD)</b> olarak bağlanır; bölümler birbirinin yerine konamaz ya da başka kasaya taşınamaz.</li>
+        <li>Her bölümün kayıt sayısı ayrıca doğrulanır; eksik ya da tutarsız bölüm kullanıcıya bildirilir.</li>
+      </ul></section>
+      <section><h2>Kilit</h2><ul>
+        <li>6 haneli PIN ya da (önerilen) harf ve rakamlı <b>kasa parolası</b>.</li>
+        <li>Parmak izi kriptografik olarak bağlıdır: Keystore'daki biyometrik anahtar her kullanımda güçlü biyometri ister; telefona yeni parmak izi eklenirse geçersiz olur ve PIN istenir.</li>
+        <li>Hatalı denemelerde artan bekleme (30 saniyeden 3 saate), saat değiştirilerek atlatılamaz. İsteğe bağlı: çok fazla hatalı denemede silme.</li>
+        <li>Keystore anahtarı kaybolursa (ör. telefon sıfırlama) deneme sayılmaz; kullanıcı şifreli yedekten kurtarmaya yönlendirilir.</li>
+      </ul></section>
+      <section><h2>Yedekler</h2><p>Şifreli yedekler sizin belirlediğiniz yedek parolasıyla korunur: PBKDF2-HMAC-SHA256 (600.000 tur) + AES-256-GCM. Parolayı biz bilmeyiz. İsteğe bağlı olarak yedek parolası Shamir yöntemiyle parçalara bölünebilir.</p></section>
+      <section><h2>Zorlama durumları</h2><p><b>Tehdit PIN'i</b> sahte bir kasa açar; bu sırada gerçek kayıtların bildirimleri ve adları gösterilmez. <b>Seyahat modu</b> seçilen kayıtları telefondan kaldırıp ayrı bir seyahat parolasıyla şifreler; hatırlatmaları da kapatılır.</p></section>
+      <section><h2>Otomatik doldurma</h2><p>Doldurmadan önce site adresi ve uygulama cihazda kontrol edilir: benzer harfli ya da uzantısı değiştirilmiş adresler, mağaza dışından kurulmuş taklit uygulamalar ve imzası değişmiş uygulamalar için uyarı verilir. Bilgiler yalnızca parmak izi, PIN ya da parolayla doğrulandıktan sonra doldurulur.</p></section>
+      <section><h2>İnternet</h2><p>Kasa verisi internete çıkmaz. Bağlantılar yalnızca: site simgeleri (yalnızca alan adı), isteğe bağlı sızıntı kontrolü (Have I Been Pwned, şifre özetinin yalnızca ilk 5 karakteri — k-anonimlik) ve Google Play (abonelik, güncelleme).</p></section>
+      <section><h2>Bilinen sınırlar</h2><ul>
+        <li>Root'lu ya da kötü amaçlı yazılım bulaşmış bir telefonda hiçbir uygulama tam korunamaz. Böyle bir cihazda 6 haneli PIN cihaz üzerinde denenebilir; bu yüzden harf ve rakamlı kasa parolası öneririz.</li>
+        <li>Java/Kotlin metinleri bellekten zorla silinemez (platform sınırı).</li>
+        <li>Yedeğin gücü, yedek parolanızın gücüne bağlıdır.</li>
+      </ul></section>
+      <section><h2>Açık bildirimi</h2><p>Bir güvenlik açığı bulduysanız lütfen önce bize yazın: <b>codefydigital@protonmail.com</b> (konu: "ZERVAULT güvenlik"). Bildirimleri en kısa sürede yanıtlar, düzeltmeyi yayınladıktan sonra isteğiniz doğrultusunda adınızı anarız.</p></section>
+    </article>
+    <article id="en" lang="en">
+      <h1>Security Design</h1>
+      <div class="muted">Version 3.0.7 · Last updated: November 2026</div>
+      <section><h2>Core principle</h2><p>ZERVAULT has no server, account or cloud. Your vault stays only on your phone, encrypted, and is never sent anywhere. This page explains openly how your data is protected; security should be a verifiable design, not "trust us".</p></section>
+      <section><h2>Key hierarchy</h2><ul>
+        <li>All vault data is encrypted with AES-256-GCM using a random 256-bit <b>data key (DEK)</b> created at setup.</li>
+        <li>The DEK is wrapped twice on disk: first with a key derived from your PIN or vault password using PBKDF2-HMAC-SHA256, then with a non-exportable <b>Android Keystore</b> key.</li>
+        <li>So even if the app files are copied to another device, they cannot be opened. Android backup and device-to-device transfer are disabled for app data.</li>
+        <li>The unwrapped DEK lives only in memory and is cleared after a period of inactivity.</li>
+      </ul></section>
+      <section><h2>Integrity</h2><ul>
+        <li>Every encryption uses a fresh random IV. The GCM tag means modified data will not decrypt.</li>
+        <li>Each section (accounts, cards, notes…) is bound with <b>additional authenticated data (AAD)</b>: format version, a per-vault ID and the section type, so sections cannot be swapped or moved to another vault.</li>
+        <li>Each section's item count is verified separately; missing or inconsistent sections are reported to the user.</li>
+      </ul></section>
+      <section><h2>Lock</h2><ul>
+        <li>A 6-digit PIN or (recommended) a <b>vault password</b> with letters and digits.</li>
+        <li>Fingerprint unlock is cryptographically bound: the biometric Keystore key requires strong biometrics on every use and is invalidated when a new fingerprint is enrolled.</li>
+        <li>Increasing lockouts after wrong attempts (30 seconds to 3 hours) that can't be bypassed by changing the clock. Optional: wipe after too many attempts.</li>
+        <li>If the Keystore key is lost (e.g. after a phone reset), attempts are not counted and the user is guided to recover from an encrypted backup.</li>
+      </ul></section>
+      <section><h2>Backups</h2><p>Encrypted backups are protected by a backup password you choose: PBKDF2-HMAC-SHA256 (600,000 iterations) + AES-256-GCM. We never know this password. Optionally, it can be split into parts with Shamir's secret sharing.</p></section>
+      <section><h2>Coercion</h2><p>A <b>duress PIN</b> opens a decoy vault; meanwhile, notifications and names of real items are hidden. <b>Travel mode</b> removes selected items from the phone and encrypts them with a separate travel password; their reminders are turned off too.</p></section>
+      <section><h2>Autofill</h2><p>Before filling, the site address and app are checked on the device: look-alike or changed-ending addresses, imitation apps installed outside a store and apps whose signature has changed trigger a warning. Data is filled only after fingerprint, PIN or password verification.</p></section>
+      <section><h2>Internet</h2><p>Vault data never goes online. Connections are only for: site icons (domain only), the optional breach check (Have I Been Pwned, only the first 5 characters of the password hash — k-anonymity) and Google Play (subscription, updates).</p></section>
+      <section><h2>Known limits</h2><ul>
+        <li>No app can be fully protected on a rooted or malware-infected phone. On such a device a 6-digit PIN can be tried on the device itself, so we recommend a vault password with letters and digits.</li>
+        <li>Java/Kotlin strings cannot be forcibly wiped from memory (platform limit).</li>
+        <li>A backup is only as strong as its backup password.</li>
+      </ul></section>
+      <section><h2>Reporting a vulnerability</h2><p>If you find a security issue, please contact us first: <b>codefydigital@protonmail.com</b> (subject: "ZERVAULT security"). We respond as quickly as possible and, if you wish, credit you after the fix is released.</p></section>
+    </article>
+  </main>
+</body>
+</html>
